@@ -1,4 +1,4 @@
-Ejemplo mínimo de una aplicación CRUD con base de datos y websockets.
+Ejemplo mínimo de una aplicación CRUD con base de datos y websockets + UI con Svelte.
 
 
 Gracias a:

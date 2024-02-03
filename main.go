@@ -192,7 +192,7 @@ func main() {
 		return c.Status(http.StatusOK).JSON(items)
 	})
 
-	app.Get("/ws/items", websocket.New(func(c *websocket.Conn) {
+	app.Get("/ws/last-item", websocket.New(func(c *websocket.Conn) {
 
 		defer func() {
 			unregister <- c
@@ -207,24 +207,19 @@ func main() {
 
 			fmt.Println("message received:", message)
 
-			rows, _ := dbConn.Query("SELECT id, name, quantity FROM items ORDER BY id DESC LIMIT 10")
-
-			var items []*Item
-			for rows.Next() {
-				item := new(Item)
-				err := rows.Scan(&item.ID, &item.Name, &item.Quantity)
-				if err != nil {
-					c.WriteMessage(websocket.TextMessage, []byte(err.Error()))
-					return
-				}
-				items = append(items, item)
+			row := dbConn.QueryRow("SELECT id, name, quantity FROM items ORDER BY id DESC LIMIT 1")
+			item := new(Item)
+			err := row.Scan(&item.ID, &item.Name, &item.Quantity)
+			if err != nil {
+				c.WriteMessage(websocket.TextMessage, []byte(err.Error()))
+				return
 			}
 
-			itemsJson, _ := json.Marshal(items)
+			itemJson, _ := json.Marshal(item)
 
-			broadcast <- string(itemsJson)
+			broadcast <- string(itemJson)
 
-			fmt.Println("message sent:", items)
+			fmt.Println("message sent:", item)
 
 		}
 
