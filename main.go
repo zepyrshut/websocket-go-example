@@ -40,7 +40,8 @@ func migrateDatabase() {
 	createTable := `
 	CREATE TABLE items (
 		id serial PRIMARY KEY UNIQUE,
-		name varchar(255) NOT NULL DEFAULT ''
+		name varchar(255) NOT NULL DEFAULT '',
+		quantity int NOT NULL DEFAULT 0
 	)
 	`
 
@@ -50,11 +51,11 @@ func migrateDatabase() {
 	}
 
 	populateTable := `
-	INSERT INTO items (name) VALUES
-	('Cheese'),
-	('Milk'),
-	('Bread'),
-	('Lamb')
+	INSERT INTO items (name, quantity) VALUES
+	('Cheese', 5),
+	('Milk', 10),
+	('Bread', 15),
+	('Lamb', 20)
 	`
 
 	_, err = dbConn.Exec(populateTable)
@@ -68,8 +69,9 @@ func killDatabase() {
 }
 
 type Item struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
+	ID       int    `json:"id"`
+	Name     string `json:"name"`
+	Quantity int    `json:"quantity"`
 }
 
 type client struct {
@@ -147,7 +149,7 @@ func main() {
 			return c.Status(http.StatusBadRequest).SendString(err.Error())
 		}
 
-		_, err := dbConn.Exec("INSERT INTO items (name) VALUES ($1)", item.Name)
+		_, err := dbConn.Exec("INSERT INTO items (name, quantity) VALUES ($1, $2)", item.Name, item.Quantity)
 		if err != nil {
 			return c.Status(http.StatusInternalServerError).SendString(err.Error())
 		}
@@ -159,7 +161,7 @@ func main() {
 
 	app.Get("/item/:id", func(c *fiber.Ctx) error {
 		id := c.Params("id")
-		row := dbConn.QueryRow("SELECT id, name FROM items WHERE id = $1", id)
+		row := dbConn.QueryRow("SELECT id, name, quantity FROM items WHERE id = $1", id)
 
 		item := new(Item)
 		err := row.Scan(&item.ID, &item.Name)
@@ -171,7 +173,7 @@ func main() {
 	})
 
 	app.Get("/items", func(c *fiber.Ctx) error {
-		rows, err := dbConn.Query("SELECT id, name FROM items ORDER BY id DESC LIMIT 10")
+		rows, err := dbConn.Query("SELECT id, name, quantity FROM items ORDER BY id DESC LIMIT 10")
 		if err != nil {
 			return c.Status(http.StatusInternalServerError).SendString(err.Error())
 		}
@@ -180,7 +182,7 @@ func main() {
 		items := make([]*Item, 0)
 		for rows.Next() {
 			item := new(Item)
-			err := rows.Scan(&item.ID, &item.Name)
+			err := rows.Scan(&item.ID, &item.Name, &item.Quantity)
 			if err != nil {
 				return c.Status(http.StatusInternalServerError).SendString(err.Error())
 			}
@@ -205,12 +207,12 @@ func main() {
 
 			fmt.Println("message received:", message)
 
-			rows, _ := dbConn.Query("SELECT id, name FROM items ORDER BY id DESC LIMIT 10")
+			rows, _ := dbConn.Query("SELECT id, name, quantity FROM items ORDER BY id DESC LIMIT 10")
 
 			var items []*Item
 			for rows.Next() {
 				item := new(Item)
-				err := rows.Scan(&item.ID, &item.Name)
+				err := rows.Scan(&item.ID, &item.Name, &item.Quantity)
 				if err != nil {
 					c.WriteMessage(websocket.TextMessage, []byte(err.Error()))
 					return
