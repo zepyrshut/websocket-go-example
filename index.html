@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ws</title>
+</head>
+<body>
+
+    example with websockets
+
+    <form id="form">
+        <input type="text" id="name" name="name">
+        <input type="submit" value="submit">
+    </form>
+
+    <div id="items"></div>
+
+
+
+    
+</body>
+
+
+<script>
+
+
+// first fetch data from server via http get
+    fetch('http://localhost:3000/items')
+    .then(response => response.json())
+    .then(data => {
+        console.log(data);
+        document.getElementById('items').innerHTML = '';
+        data.forEach(item => {
+            document.getElementById('items').innerHTML += '<div>' + item.name + '</div>';
+        });
+    })
+
+
+    ws = new WebSocket('ws://localhost:3000/ws/items');
+
+    ws.onopen = function() {
+       console.log('connected');
+    }
+
+    ws.onmessage = function(event) {
+        items = JSON.parse(event.data);
+        console.log(items);
+        document.getElementById('items').innerHTML = '';
+        items.forEach(item => {
+            document.getElementById('items').innerHTML += '<div>' + item.name + '</div>';
+        });
+    }
+
+
+    // send data to server via http post
+    document.getElementById('form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        data = {
+            name: document.getElementById('name').value,
+
+        }
+    
+
+      
+        console.log(  JSON.stringify(data));
+
+        fetch('http://localhost:3000/new-item', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    });
+
+</script>
+</html>
